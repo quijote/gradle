@@ -885,7 +885,7 @@ public class DefaultNamedDomainObjectCollection<T> extends DefaultDomainObjectCo
         }
 
         @Override
-        public String toString() {
+        protected String toStringNoReentrance() {
             return String.format("provider(%s '%s', %s)", getTypeDisplayName(), getName(), getType());
         }
     }
