@@ -226,7 +226,7 @@ public abstract class AbstractMinimalProvider<T> implements ProviderInternal<T>,
         return new ProviderGuard<>(this, provider);
     }
 
-    protected static class ProviderGuard<V> implements ValueSupplier {
+    protected static final class ProviderGuard<V> implements ValueSupplier {
         private final AbstractMinimalProvider<?> owner;
         private final ProviderInternal<V> value;
 
@@ -236,21 +236,33 @@ public abstract class AbstractMinimalProvider<T> implements ProviderInternal<T>,
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ValueProducer getProducer() {
-            return owner.evaluate(value::getProducer);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return value.getProducer();
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public boolean calculatePresence(ValueConsumer consumer) {
-            return owner.evaluate(() -> value.calculatePresence(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return value.calculatePresence(consumer);
+            }
         }
 
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public Value<? extends V> calculateValue(ValueConsumer consumer) {
-            return owner.evaluate(() -> value.calculateValue(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return value.calculateValue(consumer);
+            }
         }
 
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ExecutionTimeValue<? extends V> calculateExecutionTimeValue() {
-            return owner.evaluate(value::calculateExecutionTimeValue);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return value.calculateExecutionTimeValue();
+            }
         }
 
         public ProviderInternal<V> getUnsafe() {

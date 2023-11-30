@@ -19,6 +19,7 @@ package org.gradle.api.internal.provider;
 import com.google.common.collect.ImmutableList;
 import org.gradle.api.GradleException;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,8 +34,7 @@ public class EvaluationContext {
 
     private static final EvaluationContext INSTANCE = new EvaluationContext();
 
-    private final NullScopeContext nullContext = new NullScopeContext();
-    private final ThreadLocal<ScopeContext> threadLocalContext = new ThreadLocal<>();
+    private final ThreadLocal<ScopeContext> threadLocalContext = ThreadLocal.withInitial(() -> new PerThreadContext(null));
 
     // TODO(mlopatkin) Replace with injection.
     public static EvaluationContext current() {
@@ -105,11 +105,7 @@ public class EvaluationContext {
     }
 
     private ScopeContext getContext() {
-        ScopeContext scopeContext = threadLocalContext.get();
-        if (scopeContext != null) {
-            return scopeContext;
-        }
-        return nullContext;
+        return threadLocalContext.get();
     }
 
     private ScopeContext setContext(ScopeContext newContext) {
@@ -118,9 +114,20 @@ public class EvaluationContext {
         return newContext;
     }
 
-    private abstract class ScopeContext implements AutoCloseable {
+    public interface ScopeContextBase extends AutoCloseable {
+        @Override
+        void close();
+    }
+
+    public ScopeContextBase enter(ProviderInternal<?> provider) {
+        return getContext().enter(provider);
+    }
+
+    private abstract class ScopeContext implements ScopeContextBase {
         public ScopeContext enter(ProviderInternal<?> owner) {
-            return setContext(new PerThreadContext(this, owner));
+            PerThreadContext newContext = new PerThreadContext(this);
+            newContext.push(owner);
+            return setContext(newContext);
         }
 
         @Override
@@ -139,20 +146,6 @@ public class EvaluationContext {
         }
     }
 
-
-    private final class NullScopeContext extends ScopeContext {
-        @Override
-        public void close() {
-            throw new IllegalStateException("Null context should not be closed");
-        }
-
-        @Override
-        public void restore() {
-            // Clean up to reduce the size of the thread-local table.
-            threadLocalContext.remove();
-        }
-    }
-
     private final class NestedEvaluationContext extends ScopeContext {
         private final ScopeContext parent;
 
@@ -168,12 +161,12 @@ public class EvaluationContext {
 
     private final class PerThreadContext extends ScopeContext {
         private final Set<ProviderInternal<?>> providersInScope = new HashSet<>();
-        private final List<ProviderInternal<?>> providersStack = new ArrayList<>();
+        private final List<ProviderInternal<?>> providersStack = new ArrayList<>(16);
+        @Nullable
         private final ScopeContext parent;
 
-        public PerThreadContext(ScopeContext parent, ProviderInternal<?> initial) {
+        public PerThreadContext(@Nullable ScopeContext parent) {
             this.parent = parent;
-            push(initial);
         }
 
         private void push(ProviderInternal<?> provider) {
@@ -198,8 +191,8 @@ public class EvaluationContext {
         @Override
         public void close() {
             pop();
-            // Restore the parent context when the last provider goes out of scope.
-            if (providersInScope.isEmpty()) {
+            // Restore the parent context (if any) when the last provider goes out of scope.
+            if (parent != null && providersInScope.isEmpty()) {
                 assert threadLocalContext.get() == this;
                 parent.restore();
             }

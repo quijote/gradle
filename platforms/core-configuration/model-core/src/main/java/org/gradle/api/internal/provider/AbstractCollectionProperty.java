@@ -502,7 +502,7 @@ public abstract class AbstractCollectionProperty<T, C extends Collection<T>>
         return new CollectionSupplierGuard<>(this, supplier);
     }
 
-    protected static class CollectionSupplierGuard<T, C extends Collection<T>> implements CollectionSupplier<T, C> {
+    protected static final class CollectionSupplierGuard<T, C extends Collection<T>> implements CollectionSupplier<T, C> {
         private final AbstractCollectionProperty<?, ?> owner;
         private final CollectionSupplier<T, C> supplier;
 
@@ -512,8 +512,11 @@ public abstract class AbstractCollectionProperty<T, C extends Collection<T>>
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public Value<? extends C> calculateValue(ValueConsumer consumer) {
-            return owner.evaluate(() -> supplier.calculateValue(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculateValue(consumer);
+            }
         }
 
         @Override
@@ -522,18 +525,27 @@ public abstract class AbstractCollectionProperty<T, C extends Collection<T>>
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ExecutionTimeValue<? extends C> calculateExecutionTimeValue() {
-            return owner.evaluate(supplier::calculateExecutionTimeValue);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculateExecutionTimeValue();
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ValueProducer getProducer() {
-            return owner.evaluate(supplier::getProducer);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.getProducer();
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public boolean calculatePresence(ValueConsumer consumer) {
-            return owner.evaluate(() -> supplier.calculatePresence(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculatePresence(consumer);
+            }
         }
     }
 }

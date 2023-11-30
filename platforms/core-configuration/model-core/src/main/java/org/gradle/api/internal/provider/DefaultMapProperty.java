@@ -611,7 +611,7 @@ public class DefaultMapProperty<K, V> extends AbstractProperty<Map<K, V>, Defaul
         return new MapSupplierGuard<>(this, supplier);
     }
 
-    protected static class MapSupplierGuard<K, V> implements MapSupplier<K, V> {
+    protected static final class MapSupplierGuard<K, V> implements MapSupplier<K, V> {
         private final DefaultMapProperty<K, V> owner;
         private final MapSupplier<K, V> supplier;
 
@@ -621,13 +621,19 @@ public class DefaultMapProperty<K, V> extends AbstractProperty<Map<K, V>, Defaul
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public Value<? extends Map<K, V>> calculateValue(ValueConsumer consumer) {
-            return owner.evaluate(() -> supplier.calculateValue(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculateValue(consumer);
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public Value<? extends Set<K>> calculateKeys(ValueConsumer consumer) {
-            return owner.evaluate(() -> supplier.calculateKeys(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculateKeys(consumer);
+            }
         }
 
         @Override
@@ -636,18 +642,27 @@ public class DefaultMapProperty<K, V> extends AbstractProperty<Map<K, V>, Defaul
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ExecutionTimeValue<? extends Map<K, V>> calculateOwnExecutionTimeValue() {
-            return owner.evaluate(supplier::calculateOwnExecutionTimeValue);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculateOwnExecutionTimeValue();
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public ValueProducer getProducer() {
-            return owner.evaluate(supplier::getProducer);
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.getProducer();
+            }
         }
 
         @Override
+        @SuppressWarnings("try") // We use try-with-resources for side effects
         public boolean calculatePresence(ValueConsumer consumer) {
-            return owner.evaluate(() -> supplier.calculatePresence(consumer));
+            try (EvaluationContext.ScopeContextBase ignore = EvaluationContext.current().enter(owner)) {
+                return supplier.calculatePresence(consumer);
+            }
         }
     }
 }
