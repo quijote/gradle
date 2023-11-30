@@ -217,4 +217,58 @@ public abstract class AbstractMinimalProvider<T> implements ProviderInternal<T>,
         Class<?> type = getType();
         return String.format("provider(%s)", type == null ? "?" : type.getName());
     }
+
+    protected <R, E extends Exception> R evaluate(EvaluationContext.ScopedEvaluation<? extends R, E> evaluation) throws E {
+        return EvaluationContext.current().evaluate(this, evaluation);
+    }
+
+    protected <V> ProviderGuard<V> guardProvider(ProviderInternal<V> provider) {
+        return new ProviderGuard<>(this, provider);
+    }
+
+    protected static class ProviderGuard<V> implements ValueSupplier {
+        private final AbstractMinimalProvider<?> owner;
+        private final ProviderInternal<V> value;
+
+        public ProviderGuard(AbstractMinimalProvider<?> owner, ProviderInternal<V> value) {
+            this.owner = owner;
+            this.value = value;
+        }
+
+        @Override
+        public ValueProducer getProducer() {
+            return owner.evaluate(value::getProducer);
+        }
+
+        @Override
+        public boolean calculatePresence(ValueConsumer consumer) {
+            return owner.evaluate(() -> value.calculatePresence(consumer));
+        }
+
+        public Value<? extends V> calculateValue(ValueConsumer consumer) {
+            return owner.evaluate(() -> value.calculateValue(consumer));
+        }
+
+        public ExecutionTimeValue<? extends V> calculateExecutionTimeValue() {
+            return owner.evaluate(value::calculateExecutionTimeValue);
+        }
+
+        public ProviderInternal<V> getUnsafe() {
+            return value;
+        }
+
+        @Override
+        public String toString() {
+            return value.toString();
+        }
+
+        public ProviderInternal<? extends V> withFinalValue(ValueConsumer consumer) {
+            return value.withFinalValue(consumer);
+        }
+
+        @Nullable
+        public Class<V> getType() {
+            return value.getType();
+        }
+    }
 }
