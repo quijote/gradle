@@ -17,11 +17,11 @@
 package org.gradle.api.internal.provider;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import org.gradle.api.GradleException;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,6 +31,8 @@ public class EvaluationContext {
     public interface ScopedEvaluation<R, E extends Exception> {
         R evaluate() throws E;
     }
+
+    private static final int EXPECTED_MAX_CONTEXT_SIZE = 64;
 
     private static final EvaluationContext INSTANCE = new EvaluationContext();
 
@@ -160,8 +162,8 @@ public class EvaluationContext {
     }
 
     private final class PerThreadContext extends ScopeContext {
-        private final Set<ProviderInternal<?>> providersInScope = new HashSet<>();
-        private final List<ProviderInternal<?>> providersStack = new ArrayList<>(16);
+        private final Set<ProviderInternal<?>> providersInScope = new ReferenceOpenHashSet<>(EXPECTED_MAX_CONTEXT_SIZE);
+        private final List<ProviderInternal<?>> providersStack = new ArrayList<>(EXPECTED_MAX_CONTEXT_SIZE);
         @Nullable
         private final ScopeContext parent;
 
@@ -192,7 +194,7 @@ public class EvaluationContext {
         public void close() {
             pop();
             // Restore the parent context (if any) when the last provider goes out of scope.
-            if (parent != null && providersInScope.isEmpty()) {
+            if (parent != null && providersStack.isEmpty()) {
                 assert threadLocalContext.get() == this;
                 parent.restore();
             }
