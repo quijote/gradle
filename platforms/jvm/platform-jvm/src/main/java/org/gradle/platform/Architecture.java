@@ -16,6 +16,7 @@
 
 package org.gradle.platform;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Incubating;
 
 /**
@@ -36,7 +37,52 @@ public enum Architecture {
     X86_64,
 
     /**
-     * 64-bit reduced instruction set computer (RISC) architectures, including "aarch64", "arm64".
+     * 64-bit reduced instruction set computer (RISC) ARM architectures, including "aarch64", "arm64".
      */
-    AARCH64
+    AARCH64,
+
+    /**
+     * 64-bit IBM PowerPC (big-endian)
+     */
+    PPC64,
+
+    /**
+     * 64-bit IBM PowerPC (little-endian)
+     */
+    PPC64LE,
+
+    /**
+     * 64-bit IBM Z architectures (historically called "s390x" on Linux)
+     */
+    S390X,
+
+    /**
+     * 64-bit Sun/Oracle SPARC V9
+     */
+    SPARC_V9;
+
+    public static Architecture current() {
+        return forName(System.getProperty("os.arch", "none"));
+    }
+
+    public static Architecture forName(String arch) {
+        String archName = arch.toLowerCase();
+        if (archName.equals("x86")) {
+            return X86;
+        } else if (archName.equals("amd64")) {
+            return X86_64;
+        } else if (archName.equals("aarch64")) {
+            return AARCH64;
+        } else if (archName.equals("ppc64")) {
+            return PPC64;
+        } else if (archName.equals("ppc64le")) {
+            return PPC64LE;
+        } else if (archName.equals("s390x")) {
+            return S390X;
+        } else if (archName.equals("sparcv9")) {
+            return SPARC_V9;
+        } else {
+            throw new GradleException("Unhandled system architecture: " + arch);
+        }
+    }
 }
