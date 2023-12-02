@@ -248,6 +248,12 @@ public class JdkCacheDirectory {
             throw new RuntimeException("Programming error");
         }
 
+        File binDirectory = new File(unpackFolder, "bin");
+        if (binDirectory.isDirectory()) {
+            // archive does not contain a dedicated root folder
+            return unpackFolder;
+        }
+
         //mark the first directory since there should be only one
         for (File file : content) {
             if (file.isDirectory()) {
